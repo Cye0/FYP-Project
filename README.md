@@ -8,47 +8,33 @@ Unlike standard scripts, this project is built as a production-ready web service
 
 ## 🚀 Key Features
 
-* 
-**Facial Detection & Landmarks:** Utilizes **RetinaFace** and **MediaPipe** for precise facial area localization and landmark tracking.
+**1. Facial Detection & Landmarks:** Utilizes **RetinaFace** and **MediaPipe** for precise facial area localization and landmark tracking.
 
 
-* 
-**High-Accuracy Recognition:** Implements **FaceNet (PyTorch)** and **ArcFace** for identity verification and representation.
+**2. High-Accuracy Recognition:** Implements **FaceNet (PyTorch)** and **ArcFace** for identity verification and representation.
 
 
-* 
-**Real-time API:** Leverages **FastAPI** and **Uvicorn** for low-latency, asynchronous communication.
+**3. Real-time API:** Leverages **FastAPI** and **Uvicorn** for low-latency, asynchronous communication.
+
+ 
+**4. Database Integration:** Uses **SQLAlchemy** and **PyMySQL** to manage user data, logs, and system states.
 
 
-* 
-**Database Integration:** Uses **SQLAlchemy** and **PyMySQL** to manage user data, logs, and system states.
-
-
-* 
-**Hybrid AI Framework:** Supports multiple backend engines including **TensorFlow (macOS optimized)** and **PyTorch**.
+**5. Hybrid AI Framework:** Supports multiple backend engines including **TensorFlow (macOS optimized)** and **PyTorch**.
 
 
 
 ## 🛠 Tech Stack
 
-* 
-**Core Language:** Python.
+**1. Core Language:** Python.
 
+**2. Web Framework:** FastAPI, Jinja2 (for frontend rendering), Starlette.
+ 
+**3. AI/Deep Learning:** Torch, TensorFlow, Keras, Timm, EfficientNet.
 
-* 
-**Web Framework:** FastAPI, Jinja2 (for frontend rendering), Starlette.
+**4. Computer Vision:** OpenCV (Headless), RetinaFace, MediaPipe.
 
-
-* 
-**AI/Deep Learning:** Torch, TensorFlow, Keras, Timm, EfficientNet.
-
-
-* 
-**Computer Vision:** OpenCV (Headless), RetinaFace, MediaPipe.
-
-
-* 
-**Data Management:** MySQL, SQLAlchemy, Pydantic.
+**5. Data Management:** MySQL, SQLAlchemy, Pydantic.
 
 
 
