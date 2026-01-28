@@ -1,4 +1,4 @@
-# AI-Powered Process Monitoring & Recognition System
+# Liveness Verification and Mask Detection for Healthcare Authentication System
 
 ## 📌 Project Overview
 
