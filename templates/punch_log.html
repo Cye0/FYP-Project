@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Punch Log & Users</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow-x: auto;
+    }
+
+    th, td {
+      padding: 8px;
+      font-size: 14px;
+      word-wrap: break-word;
+    }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      tr {
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #ccc;
+      }
+
+      th {
+        display: none;
+      }
+
+      td {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        font-size: 14px;
+      }
+
+      td::before {
+        content: attr(data-label);
+        font-weight: bold;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>Punch Log</h2>
+  <div class="container">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Timestamp</th>
+          <th>Spoof Status</th>
+          <th>Mask Status</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td data-label="ID">{{ loop.index }}</td>
+          <td data-label="Name">{{ log.name }}</td>
+          <td data-label="Timestamp">{{ log.timestamp }}</td>
+          <td data-label="Spoof Status">{{ log.spoof_status }}</td>
+          <td data-label="Mask Status">{{ log.mask_status }}</td>
+          <td data-label="Type">{{ log.type }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>User List</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Mask Registered</th>
+          <th>No-Mask Registered</th>
+          <th>Created At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td data-label="ID">{{ loop.index }}</td>
+          <td data-label="Name">{{ user.name }}</td>
+          <td data-label="Mask Registered">{{ "✅" if user.mask_embedding else "❌" }}</td>
+          <td data-label="No-Mask Registered">{{ "✅" if user.no_mask_embedding else "❌" }}</td>
+          <td data-label="Created At">{{ user.created_at }}</td>
+          <td data-label="Actions">
+            <form action="/users/delete/{{ user.id }}" method="post" style="display:inline;">
+              <button onclick="return confirm('Are you sure?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <a class="back-btn" href="/"><button>Back</button></a>
+  </div>
+</body>
+</html>

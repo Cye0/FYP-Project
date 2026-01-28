@@ -1,0 +1,11 @@
+venv-py11/
+__pycache__/
+*.pyc
+.DS_Store
+# Also ignore large model files if you don't need them on GitHub
+models/mask_recognition_model/InceptionResNetV1_ArcFace.pt
+models/blink_detection_model/shape_predictor_68_face_landmarks.datvenv-py11/
+__pycache__/
+.DS_Store
+models/mask_recognition_model/InceptionResNetV1_ArcFace.pt
+models/blink_detection_model/shape_predictor_68_face_landmarks.dat

@@ -1,0 +1,1 @@
+h_input, w_input = int(h_input), int(w_input)

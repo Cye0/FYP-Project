@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Blink Verification</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .video-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      max-width: 700px;
+      width: 90%;
+      margin-top: 40px;
+    }
+
+    video, canvas {
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: scaleX(-1) !important;
+    }
+
+    #msg, #alignmentWarning {
+      text-align: center;
+      font-size: 18px;
+    }
+
+    #alignmentWarning {
+      color: #e74c3c;
+      font-weight: bold;
+      display: none;
+    }
+
+    .back-btn {
+      margin-top: 20px;
+    }
+
+    @media (max-width: 600px) {
+      #msg {
+        font-size: 16px;
+      }
+
+      .video-container {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="video-container">
+    <h2>Blink Verification</h2>
+    <video id="video" autoplay playsinline width="640" height="480"></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    <p id="msg">Initializing camera...</p>
+    <p id="alignmentWarning">⚠️ Please face the camera straight.</p>
+    <a class="back-btn" href="/"><button>Back</button></a>
+  </div>
+
+  <script>
+    const target = "{{ target }}";
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const msg = document.getElementById('msg');
+    const alignmentWarning = document.getElementById('alignmentWarning');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(err => msg.innerText = 'Camera error: ' + err.message);
+
+    function getBase64FromCanvas() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg');
+    }
+
+
+    startBlinkCheck();
+
+    function showFailureMessage() {
+      alignmentWarning.style.display = "none";
+      msg.innerText = "❌ Blink detection failed.";
+      setTimeout(() => {
+        alert("❌ Blink detection failed.\nYou will now return to the homepage.");
+        window.location.href = "/";
+      }, 500);  // small delay so message updates first
+    }
+
+
+    function startBlinkCheck() {
+      msg.innerText = 'Get ready to blink in 3...';
+      let count = 3;
+
+      const preCountdown = setInterval(() => {
+        count--;
+        if (count > 0) {
+          msg.innerText = `Get ready to blink in ${count}...`;
+        } else {
+          clearInterval(preCountdown);
+          msg.innerText = 'Blink detection starting...';
+
+          const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
+          const ws = new WebSocket(protocol + location.host + '/ws/blink-check');
+
+          let faceIsStraight = false;
+          let blinkDetected = false;
+          let timeout = 10;
+
+          const frameInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(getBase64FromCanvas());
+              timeout--;
+
+              if (timeout <= 0) {
+                clearInterval(frameInterval);
+                ws.close();
+                showFailureMessage();
+              }
+
+              if (!faceIsStraight) {
+                alignmentWarning.style.display = 'block';
+                msg.innerText = `⚠️ Please face the camera straight. (${timeout}s left)`;
+              } else {
+                alignmentWarning.style.display = 'none';
+                msg.innerText = `Please blink to proceed (${timeout}s left)`;
+              }
+            }
+          }, 1000);
+
+          ws.onmessage = (event) => {
+            const data = event.data;
+
+            if (data === "face_straight") {
+              faceIsStraight = true;
+            } else if (data === "face_not_straight") {
+              faceIsStraight = false;
+            } else if (data === "blink_detected") {
+              blinkDetected = true;
+              clearInterval(frameInterval);
+              alignmentWarning.style.display = "none";
+              msg.innerText = "✅ Blink detected. Redirecting...";
+              ws.close();
+              setTimeout(() => window.location.href = `/${target}?blink_passed=true`, 1000);
+            } else if (data === "timeout") {
+              clearInterval(frameInterval);
+              showFailureMessage();
+              ws.close();
+            }
+          };
+
+          ws.onerror = () => {
+            clearInterval(frameInterval);
+            showFailureMessage();
+          };
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ mode.title() }} Face</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(to right, #f9f9f9, #eef2f3);
+  }
+
+  .video-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    max-width: 700px;
+    width: 90%;
+  }
+
+  .top-right {
+    position: fixed;
+    top: 20px;
+    right: 30px;
+  }
+
+  .top-right button {
+    background: #2ecc71;
+  }
+
+  video, canvas {
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: scaleX(-1) !important;
+  }
+
+  #msg, #step-info, #alignmentWarning {
+    text-align: center;
+    font-size: 18px;
+  }
+
+  #step-info {
+    font-weight: 600;
+    color: #34495e;
+  }
+
+  #alignmentWarning {
+    color: #e74c3c;
+    font-weight: bold;
+    display: none;
+  }
+
+  #username {
+    padding: 10px;
+    width: 250px;
+    font-size: 16px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+
+  .back-btn {
+    margin-top: 10px;
+  }
+
+  @media (max-width: 600px) {
+    #username,
+    #submitBtn {
+      width: 90%;
+      max-width: 250px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="video-container">
+    <h2>{{ mode.title() }} Face</h2>
+    <div id="step-info"></div>
+    <video id="video" autoplay playsinline width="640" height="480"></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    {% if mode == "register" %}
+      <input type="text" id="username" placeholder="Enter your name" required />
+    {% endif %}
+    <button id="submitBtn" onclick="captureAndSend()">{{ mode.title() }}</button>
+    <div id="msg"></div>
+    <p id="alignmentWarning">⚠️ Please face the camera straight.</p>
+    <a class="back-btn" href="/"><button>Back</button></a>
+  </div>
+
+<script>
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const msg = document.getElementById('msg');
+  const stepInfo = document.getElementById('step-info');
+  const submitBtn = document.getElementById('submitBtn');
+  let currentStep = 'no_mask';
+
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => video.srcObject = stream)
+    .catch(err => msg.innerText = 'Camera error: ' + err.message);
+
+
+  function getBase64FromCanvas() {
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg');
+  }
+
+
+  function captureAndSend() {
+    const mode = "{{ mode }}";
+    const username = document.getElementById('username')?.value.trim();
+
+    if (mode === "register") {
+      if (!username || username.length < 2 || !/^[A-Za-z ]+$/.test(username)) {
+        msg.innerText = "Please enter a valid name (letters and spaces only).";
+        return;
+      }
+      sendRegister(username);
+    } else {
+      // ✅ Always call sendAuth for login/logout — blink already passed before reaching here
+      sendAuth(mode);
+    }
+  }
+
+
+  function sendRegister(username) {
+    const dataURL = getBase64FromCanvas();
+    const formData = new FormData();
+    formData.append("name", username);
+    formData.append("image", dataURL);
+    formData.append("mode", currentStep);
+
+    msg.innerText = "Processing...";
+    stepInfo.innerText = `Now capturing: ${currentStep.toUpperCase()} face. Please ${currentStep === 'mask' ? 'wear' : 'remove'} your mask.`;
+
+    fetch('/register', {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.text())
+    .then(text => {
+      msg.innerText = text;
+
+      if (text.toLowerCase().includes("no face detected")) {
+        return;  // ⛔ Don't proceed if no face was found
+      }
+
+      if (text.toLowerCase().includes("full registration completed")) {
+        stepInfo.innerText = "";
+        submitBtn.disabled = true;
+        video.srcObject.getTracks().forEach(track => track.stop());
+        if (document.getElementById("username")) {
+          document.getElementById("username").value = "";
+        }
+
+        alert("✅ " + text + "\nYou will now be redirected to the login page.");
+        window.location.href = "/";
+        return;
+      }
+
+      if (text.includes("already registered") || text.includes("Invalid") || text.includes("Spoof") || text.includes("Incorrect")) return;
+
+      if (currentStep === 'no_mask') {
+        currentStep = 'mask';
+        stepInfo.innerText = "Now capturing: MASK face. Please wear your mask.";
+        msg.innerText = 'No-mask captured. Please wear your mask and press the button again.';
+      }
+    })
+    .catch(err => msg.innerText = 'Error: ' + err.message);
+  }
+
+
+  function sendAuth(type) {
+    const formData = new FormData();
+    formData.append("image", getBase64FromCanvas());
+
+    msg.innerText = "Authenticating...";
+    fetch(`/auth?type=${type}`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "unrecognized") {
+        // Show confirmation dialog
+        if (confirm(data.message)) {
+          window.location.href = data.redirect;
+        } else {
+          window.location.href = "/";
+        }
+      } else {
+        // Just show the message
+        alert(data.message);
+        window.location.href = "/";
+      }
+    })
+    .catch(err => {
+      msg.innerText = 'Error: ' + err.message;
+    });
+  }
+
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = "{{ mode }}";
+    const blinkPassed = urlParams.get("blink_passed") === "true";
+
+    if (blinkPassed && mode !== "register") {
+      msg.innerText = "✅ Blink verified. Please press the button to continue.";
+    }
+  });
+
+</script>
+</body>
+</html>
